@@ -117,8 +117,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func pasteItem(_ item: ClipboardItem) {
         guard let panel = clipboardPanel, panel.isVisible else { return }
 
-        monitor.ignoringNextChange = true
         PasteService.writeToPasteboard(item)
+        monitor.markOwnWrite()
 
         isPasting = true
         panel.orderOut(nil)

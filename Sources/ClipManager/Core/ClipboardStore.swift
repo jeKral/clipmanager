@@ -28,20 +28,19 @@ final class ClipboardStore: ObservableObject {
     func addItem(_ item: ClipboardItem) {
         let settings = AppSettings.shared
 
-        // Deduplicate: skip if the topmost non-pinned item has identical display text and category
-        if let topItem = items.first(where: { !$0.isPinned }),
-           topItem.category == item.category,
-           topItem.displayText == item.displayText,
-           item.category != .image {
-            return
-        }
-
-        // Identical images check via first inline data value
-        if item.category == .image,
-           let firstNew = item.inlineData.values.first,
-           let topImage = items.first(where: { !$0.isPinned && $0.category == .image }),
-           topImage.inlineData.values.first == firstNew {
-            return
+        // Deduplicate: if the topmost non-pinned item has the same content hash,
+        // this is a re-copy of identical content — skip it. The hash covers
+        // inline AND large file-based data (images), fixing the old compare that
+        // read `inlineData.values.first` (nondeterministic) and skipped file data.
+        if let top = items.first(where: { !$0.isPinned }) {
+            if let newHash = item.contentHash, top.contentHash == newHash {
+                return
+            }
+            // Fallback for legacy persisted items that predate contentHash.
+            if item.contentHash == nil, top.contentHash == nil,
+               top.category == item.category, top.displayText == item.displayText {
+                return
+            }
         }
 
         items.insert(item, at: 0)

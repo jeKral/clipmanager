@@ -7,13 +7,23 @@ final class ClipboardMonitor {
 
     var onNewItem: ((ClipboardItem) -> Void)?
 
-    /// Set to true before writing to NSPasteboard programmatically to skip the next change.
-    var ignoringNextChange = false
-
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
 
+    /// The pasteboard `changeCount` produced by our own programmatic writes
+    /// (auto-paste / manual copy). Only *that exact* change is skipped on the
+    /// next poll. This replaces the old `ignoringNextChange` bool flag, which was
+    /// racy: a user copy that landed right after a paste was also swallowed.
+    private var ignoredChangeCount: Int?
+
     private init() {}
+
+    /// Call immediately AFTER writing to the general pasteboard from our own code.
+    /// `changeCount` updates synchronously on write, so this captures the exact
+    /// value the next poll will see, and lets us skip just that one change.
+    func markOwnWrite() {
+        ignoredChangeCount = NSPasteboard.general.changeCount
+    }
 
     // MARK: - Control
 
@@ -38,8 +48,9 @@ final class ClipboardMonitor {
         guard current != lastChangeCount else { return }
         lastChangeCount = current
 
-        if ignoringNextChange {
-            ignoringNextChange = false
+        // Skip the change we produced ourselves (auto-paste / re-copy).
+        if current == ignoredChangeCount {
+            ignoredChangeCount = nil
             return
         }
 

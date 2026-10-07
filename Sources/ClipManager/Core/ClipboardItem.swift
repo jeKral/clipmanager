@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -23,6 +24,12 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
 
     /// Category for icon / color / grouping
     var category: Category
+
+    /// Deterministic SHA-256 over the item's payload (inline + file data).
+    /// Used for reliable deduplication — the old compare read
+    /// `inlineData.values.first` (nondeterministic order) and skipped large
+    /// file-based data entirely, so identical images were stored twice.
+    var contentHash: String?
 
     // MARK: - Category
 
@@ -70,7 +77,8 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
         inlineData: [String: String],
         fileData: [String: String],
         displayText: String?,
-        category: Category
+        category: Category,
+        contentHash: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -80,6 +88,7 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
         self.fileData = fileData
         self.displayText = displayText
         self.category = category
+        self.contentHash = contentHash
     }
 
     // MARK: - Helpers
@@ -152,6 +161,23 @@ enum ClipboardItemFactory {
 
         guard !allTypes.isEmpty else { return nil }
 
+        // Deterministic content hash: concatenate payload bytes for every type
+        // in sorted order (inline decoded, or read from the item's data dir).
+        // Covers both inline and large file-based data, so images dedup reliably.
+        var contentPayload = Data()
+        for typeString in allTypes.sorted() {
+            if let b64 = inlineData[typeString], let d = Data(base64Encoded: b64) {
+                contentPayload.append(d)
+            } else if let filename = fileData[typeString] {
+                let fileURL = itemDir.appendingPathComponent(filename)
+                if let d = try? Data(contentsOf: fileURL) {
+                    contentPayload.append(d)
+                }
+            }
+        }
+        let digest = SHA256.hash(data: contentPayload)
+        let contentHash = digest.map { String(format: "%02x", $0) }.joined()
+
         return ClipboardItem(
             id: itemID,
             timestamp: Date(),
@@ -160,7 +186,8 @@ enum ClipboardItemFactory {
             inlineData: inlineData,
             fileData: fileData,
             displayText: displayText,
-            category: category
+            category: category,
+            contentHash: contentHash
         )
     }
 
@@ -207,7 +234,24 @@ enum ClipboardItemFactory {
             }
         } else if type.rawValue.contains("NSColor") || uti?.conforms(to: .data) == true && type.rawValue.lowercased().contains("color") {
             category = .color
+            if displayText == nil, let color = colorFromData(data), let hex = colorHex(from: color) {
+                displayText = hex
+            }
         }
+    }
+
+    /// Decode a color pasteboard payload (a keyed archive of `NSColor`).
+    private static func colorFromData(_ data: Data) -> NSColor? {
+        (try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSColor.self], from: data)) as? NSColor
+    }
+
+    /// Convert a clipboard `NSColor` into a `#RRGGBB` string.
+    private static func colorHex(from color: NSColor) -> String? {
+        guard let rgb = color.usingColorSpace(.sRGB) else { return nil }
+        let r = Int((rgb.redComponent * 255).rounded())
+        let g = Int((rgb.greenComponent * 255).rounded())
+        let b = Int((rgb.blueComponent * 255).rounded())
+        return String(format: "#%02X%02X%02X", r, g, b)
     }
 
     private static func plainTextFromRTF(_ data: Data) -> String? {

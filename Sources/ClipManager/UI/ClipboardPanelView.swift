@@ -194,8 +194,8 @@ struct ClipboardPanelView: View {
         if AppSettings.shared.pasteOnSelect {
             delegate?.pasteItem(item)
         } else {
-            ClipboardMonitor.shared.ignoringNextChange = true
             PasteService.writeToPasteboard(item)
+            ClipboardMonitor.shared.markOwnWrite()
             closePanel()
         }
     }
