@@ -53,17 +53,7 @@ jobs:
           path: build/ClipManager.app
           retention-days: 14
 
-  build-intel:
-    name: Build (Intel Mac)
-    runs-on: [self-hosted, macos, intel-mac]  # your local Intel runner
-    if: github.event_name == 'push'           # skip for PRs from forks
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build (release, x86_64)
-        run: swift build -c release --arch x86_64
-
-      - name: Assemble .app bundle (Intel)
-        run: bash Scripts/build-app.sh release x86_64
-        env:
-          CLIP_LICENSE_SECRET: ${{ secrets.CLIP_LICENSE_SECRET }}
+  # No self-hosted Intel job: the arm64 job above compiles the universal
+  # binary (arm64 + x86_64) on a hosted runner, which already verifies the
+  # Intel slice. Releases ship two per-arch DMGs (see release.yml), built
+  # cross-arch on the same hosted runner.

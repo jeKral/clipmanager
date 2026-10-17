@@ -20,15 +20,17 @@ bash "$(dirname "$0")/inject-secret.sh"
 
 # ---- Build binary ----
 if [ "$ARCH" = "universal" ]; then
+    ARCH_ARGS="--arch arm64 --arch x86_64"
     swift build -c "$CONFIG" --arch arm64 --arch x86_64
-    BINARY=".build/apple/Products/${CONFIG^}/${PRODUCT_NAME}"
-elif [ "$ARCH" = "arm64" ]; then
-    swift build -c "$CONFIG" --arch arm64
-    BINARY=".build/arm64-apple-macosx/${CONFIG}/${PRODUCT_NAME}"
 else
-    swift build -c "$CONFIG" --arch x86_64
-    BINARY=".build/x86_64-apple-macosx/${CONFIG}/${PRODUCT_NAME}"
+    ARCH_ARGS="--arch $ARCH"
+    swift build -c "$CONFIG" --arch "$ARCH"
 fi
+# Resolve the output dir via SPM itself: the on-disk layout differs across
+# SPM versions/toolchains (.build/<triple>/release, .build/apple/Products,
+# .build/out/Products, ...).
+BIN_PATH="$(swift build -c "$CONFIG" $ARCH_ARGS --show-bin-path)"
+BINARY="${BIN_PATH}/${PRODUCT_NAME}"
 
 # ---- Assemble .app bundle ----
 rm -rf "${OUTPUT_DIR}/${PRODUCT_NAME}.app"

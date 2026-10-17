@@ -59,12 +59,12 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
           rm /tmp/cert.p12
 
-      - name: Build universal .app
-        run: bash Scripts/build-app.sh release universal
+      - name: Build Apple Silicon .app
+        run: bash Scripts/build-app.sh release arm64
         env:
           CLIPMANAGER_VERSION: ${{ steps.version.outputs.VERSION }}
 
-      - name: Notarize .app
+      - name: Notarize Apple Silicon .app
         if: env.NOTARIZE_APPLE_ID != ''
         run: |
           xcrun notarytool submit build/ClipManager.app \
@@ -74,10 +74,32 @@ jobs:
             --wait
           xcrun stapler staple build/ClipManager.app
 
-      - name: Create DMG
+      - name: Create Apple Silicon DMG
         run: bash Scripts/create-dmg.sh
         env:
           CLIPMANAGER_VERSION: ${{ steps.version.outputs.VERSION }}
+          DMG_SUFFIX: "-arm64"
+
+      - name: Build Intel .app
+        run: bash Scripts/build-app.sh release x86_64
+        env:
+          CLIPMANAGER_VERSION: ${{ steps.version.outputs.VERSION }}
+
+      - name: Notarize Intel .app
+        if: env.NOTARIZE_APPLE_ID != ''
+        run: |
+          xcrun notarytool submit build/ClipManager.app \
+            --apple-id "$NOTARIZE_APPLE_ID" \
+            --team-id  "$NOTARIZE_TEAM_ID" \
+            --password "$NOTARIZE_PASSWORD" \
+            --wait
+          xcrun stapler staple build/ClipManager.app
+
+      - name: Create Intel DMG
+        run: bash Scripts/create-dmg.sh
+        env:
+          CLIPMANAGER_VERSION: ${{ steps.version.outputs.VERSION }}
+          DMG_SUFFIX: "-x86_64"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -87,4 +109,5 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            build/ClipManager-${{ steps.version.outputs.VERSION }}.dmg
+            build/ClipManager-${{ steps.version.outputs.VERSION }}-arm64.dmg
+            build/ClipManager-${{ steps.version.outputs.VERSION }}-x86_64.dmg
