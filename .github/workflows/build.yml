@@ -19,14 +19,32 @@ jobs:
       - name: Swift version
         run: swift --version
 
+      - name: Verify secret template is clean
+        run: |
+          # The HMAC secret is injected at build time; the repo must only ever
+          # contain the nil template (see Scripts/inject-secret.sh).
+          if ! grep -q 'public static let licenseSecret: String? = nil' Sources/ClipManagerCore/SecretConfig.swift; then
+            echo "ERROR: SecretConfig.swift must contain the nil template — a secret must never be committed."
+            exit 1
+          fi
+
       - name: Build (debug, arm64)
         run: swift build -c debug --arch arm64
+
+      - name: Run tests
+        # Self-contained: the license tests use a fixed in-test secret
+        # (Tests/.../Fixtures.swift) and pass even in a fail-closed build.
+        run: swift test
 
       - name: Build (release, universal)
         run: swift build -c release --arch arm64 --arch x86_64
 
       - name: Assemble .app bundle
+        # Injects CLIP_LICENSE_SECRET (if set) so the CI artifact is a
+        # usable, activatable app; without it the app fails closed.
         run: bash Scripts/build-app.sh release universal
+        env:
+          CLIP_LICENSE_SECRET: ${{ secrets.CLIP_LICENSE_SECRET }}
 
       - name: Upload .app artifact
         uses: actions/upload-artifact@v4
@@ -47,3 +65,5 @@ jobs:
 
       - name: Assemble .app bundle (Intel)
         run: bash Scripts/build-app.sh release x86_64
+        env:
+          CLIP_LICENSE_SECRET: ${{ secrets.CLIP_LICENSE_SECRET }}

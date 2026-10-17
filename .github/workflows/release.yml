@@ -19,9 +19,26 @@ jobs:
       NOTARIZE_APPLE_ID: ${{ secrets.NOTARIZE_APPLE_ID }}
       NOTARIZE_TEAM_ID:  ${{ secrets.NOTARIZE_TEAM_ID }}
       NOTARIZE_PASSWORD: ${{ secrets.NOTARIZE_PASSWORD }}
+      CLIP_LICENSE_SECRET: ${{ secrets.CLIP_LICENSE_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify secret template is clean
+        run: |
+          # The HMAC secret is injected at build time; the repo must only ever
+          # contain the nil template (see Scripts/inject-secret.sh).
+          if ! grep -q 'public static let licenseSecret: String? = nil' Sources/ClipManagerCore/SecretConfig.swift; then
+            echo "ERROR: SecretConfig.swift must contain the nil template — a secret must never be committed."
+            exit 1
+          fi
+
+      - name: Require license secret
+        if: env.CLIP_LICENSE_SECRET == ''
+        run: |
+          echo "ERROR: CLIP_LICENSE_SECRET is not set in repo secrets."
+          echo "A release built without it fails closed — no serial can ever be activated."
+          exit 1
 
       - name: Extract version from tag
         id: version

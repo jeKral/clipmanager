@@ -15,6 +15,9 @@ APP_DIR="${OUTPUT_DIR}/${PRODUCT_NAME}.app/Contents"
 
 echo "→ Building ${PRODUCT_NAME} (config=${CONFIG}, arch=${ARCH})"
 
+# ---- License secret (build-time) ----
+bash "$(dirname "$0")/inject-secret.sh"
+
 # ---- Build binary ----
 if [ "$ARCH" = "universal" ]; then
     swift build -c "$CONFIG" --arch arm64 --arch x86_64

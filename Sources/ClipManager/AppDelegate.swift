@@ -1,6 +1,8 @@
 import Cocoa
 import SwiftUI
 import Carbon.HIToolbox
+import Combine
+import ClipManagerCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -13,9 +15,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = ClipboardStore.shared
     private let monitor = ClipboardMonitor.shared
     private let hotkeyManager = HotkeyManager.shared
+    let licenseStore = LicenseStore()
+    private let backgroundSync: BackgroundSync
+    private var licenseCancellables = Set<AnyCancellable>()
 
     var previousApp: NSRunningApplication?
     var isPasting = false
+
+    override init() {
+        self.backgroundSync = BackgroundSync(licenseStore: licenseStore)
+    }
 
     // MARK: - Lifecycle
 
@@ -23,13 +32,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppSettings.shared.load()
         setupMenuBar()
         setupClipboardPanel()
-        startMonitoring()
         registerHotkey()
         store.load()
+        startLicenseGating()
         UpdateChecker.checkForUpdates()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        backgroundSync.stop()
         monitor.stop()
         store.save()
     }
@@ -144,17 +154,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let settingsView = SettingsView().environmentObject(store)
+        let settingsView = SettingsView(license: licenseStore).environmentObject(store)
         let hosting = NSHostingController(rootView: settingsView)
         let window = NSWindow(contentViewController: hosting)
         window.title = "Nastavení ClipManager"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(NSSize(width: 460, height: 420))
+        window.setContentSize(NSSize(width: 460, height: 620))
         window.center()
         window.isReleasedWhenClosed = false
         settingsWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - License gating
+
+    /// Drives clipboard monitoring from the license decision: measuring runs
+    /// in `.allowed` and `.grace`, and stops in `.blocked`. Also starts the
+    /// background relay sync (heartbeat + remote license check).
+    private func startLicenseGating() {
+        licenseStore.$decision
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] decision in
+                guard let self else { return }
+                if decision.isMeasurementAllowed {
+                    self.startMonitoring()
+                } else {
+                    self.monitor.stop()
+                }
+            }
+            .store(in: &licenseCancellables)
+
+        if licenseStore.decision.isMeasurementAllowed {
+            startMonitoring()
+        }
+        backgroundSync.start()
     }
 
     // MARK: - Private helpers
