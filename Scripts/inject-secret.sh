@@ -30,7 +30,9 @@ src = open(path, encoding="utf-8").read().splitlines(keepends=True)
 out = []
 found = False
 for line in src:
-    if "static let licenseSecret" in line:
+    # Match only the declaration line; the marker also appears in the
+    # doc comment above it and must be left untouched.
+    if line.strip().startswith("public static let licenseSecret"):
         out.append("    public static let licenseSecret: String? = %s\n" % value)
         found = True
     else:
@@ -52,7 +54,9 @@ src = open(path, encoding="utf-8").read().splitlines(keepends=True)
 out = []
 found = False
 for line in src:
-    if "static let licenseSecret" in line:
+    # Match only the declaration line; the marker also appears in the
+    # doc comment above it and must be left untouched.
+    if line.strip().startswith("public static let licenseSecret"):
         out.append("    public static let licenseSecret: String? = %s\n" % value)
         found = True
     else:
