@@ -7,7 +7,7 @@ import AppKit
 
 enum UpdateChecker {
 
-    private static let repoAPI = "https://api.github.com/repos/h0nyik/clipmanager/releases/latest"
+    private static let repoAPI = "https://api.github.com/repos/jeKral/clipmanager/releases/latest"
 
     static func checkForUpdates(force: Bool = false) {
         guard AppSettings.shared.checkUpdates || force else { return }

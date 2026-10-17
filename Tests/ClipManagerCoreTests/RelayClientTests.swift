@@ -185,13 +185,13 @@ final class RelayClientTests: XCTestCase {
     func testBugReportReturnsIssueUrl() async throws {
         StubURLProtocol.handler = { _ in .init(
             status: 200,
-            body: self.json(BugResponseBody(ok: true, issueUrl: "https://github.com/h0nyik/clipmanager/issues/42"))
+            body: self.json(BugResponseBody(ok: true, issueUrl: "https://github.com/jeKral/clipmanager/issues/42"))
         ) }
 
         let report = Telemetry.currentBugReport(installId: Fixtures.installId, message: "boom", log: "x")
         let url = try await client.sendBugReport(report)
 
-        XCTAssertEqual(url?.absoluteString, "https://github.com/h0nyik/clipmanager/issues/42")
+        XCTAssertEqual(url?.absoluteString, "https://github.com/jeKral/clipmanager/issues/42")
         let request = try XCTUnwrap(StubURLProtocol.requests.first)
         XCTAssertEqual(request.url?.path, "/api/v1/bug")
     }

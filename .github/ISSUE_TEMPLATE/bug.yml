@@ -1,0 +1,63 @@
+name: Bug report
+description: Něco nefunguje — nahlas to přines
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tip: v aplikaci můžeš použít **pravý klik na ikonu ve šperk → Hlásit chybu…** —
+        sám doplní verzi, macOS, architekturu a výňatek logu.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Co se stalo?
+      description: Popiš, co jsi čekal a co se stalo místo toho.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Krok pro reprodukci
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Verze ClipManager
+      description: Verze aplikace (v Nastavení → Licence).
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: macOS
+      description: Verze macOS a typ CPU (Apple Silicon / Intel).
+      placeholder: "macOS 15.2 / Apple Silicon"
+    validations:
+      required: true
+  - type: dropdown
+    id: repro
+    attributes:
+      label: Reprodukuje se vždy?
+      options:
+        - vždy
+        - občas
+        - jednorázově
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (nepovinné)
+      description: Pokud máš log z aplikace (Hlásit chybu ho přiloží sám), přidej ho sem.
+    render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: Další informace
+    render: text

@@ -30,7 +30,7 @@
     <string>ClipManager potřebuje posílat klávesové zkratky pro automatické vkládání obsahu schránky.</string>
     <!-- Update feed URL (replace with your GitHub Pages / release URL) -->
     <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/h0nyik/clipmanager/main/Appcast/appcast.xml</string>
+    <string>https://raw.githubusercontent.com/jeKral/clipmanager/main/Appcast/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>PLACEHOLDER_SPARKLE_KEY</string>
 </dict>

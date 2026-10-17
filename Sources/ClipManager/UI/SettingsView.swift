@@ -181,6 +181,11 @@ struct SettingsView: View {
                 .disabled(relayURLStr.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             .help("Adresa relay služby (licenční kontrola + telemetrie).")
+
+            Button("Hlásit chybu…") {
+                (NSApp.delegate as? AppDelegate)?.presentReportBug()
+            }
+            .help("Anonymní hlášení: vytvoří issue na GitHubu s verzí, OS a výňatkem logu.")
         }
     }
 
