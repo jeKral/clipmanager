@@ -51,10 +51,12 @@ struct ClipboardPanelView: View {
         .padding(8)
         .focusable()
         .focused($isFocused)
-        .onKeyPress(.escape)     { closePanel(); return .handled }
-        .onKeyPress(.upArrow)    { moveSelection(by: -1); return .handled }
-        .onKeyPress(.downArrow)  { moveSelection(by: 1); return .handled }
-        .onKeyPress(.return)     { pasteSelected(); return .handled }
+        .panelKeyboardShortcuts(
+            escape:    { closePanel() },
+            upArrow:   { moveSelection(by: -1) },
+            downArrow: { moveSelection(by: 1) },
+            returnKey: { pasteSelected() }
+        )
         .onAppear {
             selectedIndex = 0
             isFocused = true
@@ -136,7 +138,7 @@ struct ClipboardPanelView: View {
                             }
                         }
                     }
-                    .onChange(of: selectedIndex) { _, idx in
+                    .onChange(of: selectedIndex) { idx in
                         if let item = displayItems[safe: idx] {
                             withAnimation(.easeInOut(duration: 0.15)) {
                                 proxy.scrollTo(item.id, anchor: .center)
@@ -255,5 +257,27 @@ struct VisualEffectView: NSViewRepresentable {
 extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+// MARK: - Keyboard shortcuts (macOS 14+; fallback: mouse + auto-close)
+
+private extension View {
+    @ViewBuilder
+    func panelKeyboardShortcuts(
+        escape: @escaping () -> Void,
+        upArrow: @escaping () -> Void,
+        downArrow: @escaping () -> Void,
+        returnKey: @escaping () -> Void
+    ) -> some View {
+        if #available(macOS 14.0, *) {
+            self
+                .onKeyPress(.escape)    { escape();    return .handled }
+                .onKeyPress(.upArrow)   { upArrow();   return .handled }
+                .onKeyPress(.downArrow) { downArrow(); return .handled }
+                .onKeyPress(.return)    { returnKey(); return .handled }
+        } else {
+            self
+        }
     }
 }
